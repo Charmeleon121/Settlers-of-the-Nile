@@ -565,7 +565,7 @@ Light:
     m_Resolution: -1
     m_CustomResolution: -1
     m_Strength: 1
-    m_Bias: 0.1
+    m_Bias: 10
     m_NormalBias: 0.4
     m_NearPlane: 0.2
     m_CullingMatrixOverride:
@@ -1809,8 +1809,8 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 25
+  m_VertexColorAlwaysGammaSpace: 1
+  m_AdditionalShaderChannelsFlag: 1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -1962,7 +1962,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48e5cfc3478f5af429b6c2b411184229, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MapHandler
-  divisor: 8
 --- !u!114 &1085835751
 MonoBehaviour:
   m_ObjectHideFlags: 0

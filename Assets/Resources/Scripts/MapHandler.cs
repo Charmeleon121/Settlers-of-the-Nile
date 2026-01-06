@@ -8,7 +8,7 @@ public class MapHandler : MonoBehaviour {
 	private Shader grassShader;
 
 	// All ground blocks and water blocks
-	private GameObject[] groundBlocks, waterBlocks;
+	private GameObject[] groundBlocks, waterBlocks, allBlocks;
 
 	// All ghost blocks
 	private GameObject[] ghostObjects;
@@ -32,6 +32,9 @@ public class MapHandler : MonoBehaviour {
 	private readonly int topWidth = 28;
 	private readonly int bottomWidth = 18;
 	private readonly int height = 15;
+	
+	// The previous position of the camera
+	private Vector3 prevCameraPos;
 
 	// Other scripts
 	private Player playerScript;
@@ -57,6 +60,8 @@ public class MapHandler : MonoBehaviour {
 		sun = GameObject.Find("Sun");
 		sunlight = sun.GetComponent<Light>();
 		sun.transform.rotation = Quaternion.Euler(rotX, 0f, 0f);
+		
+		prevCameraPos = Camera.main.transform.position;
 
 		playerScript = GameObject.Find("Player").GetComponent<Player>();
 		npcHandler = GameObject.Find("EventSystem").GetComponent<NPCHandler>();
@@ -75,10 +80,17 @@ public class MapHandler : MonoBehaviour {
 	 * which have an associated task marked as complete
 	 */
 	void Update() {
-		CameraCulling();
+		// Only update the culling if the camera moved
+		if (Camera.main.transform.position != prevCameraPos) {
+			CameraCulling();
+		}
+		
 		DayProgression();
 		UpdateBuildGhostPos();
 		BuildCompleteBuildables();
+		
+		// Update the previous camera position
+		prevCameraPos = Camera.main.transform.position;
 	}
 
 	// A sinusoidal function to determine the shape/length of the river
@@ -96,7 +108,7 @@ public class MapHandler : MonoBehaviour {
 			int riverXPos = GetRiverTilePos(z);
 
 			for (int x = -width / 2; x < width / 2; ++x) {
-				if (x >= riverXPos - (width / 25) && x <= riverXPos + (width / 25)) {
+				if (x >= riverXPos - (width / 30) && x <= riverXPos + (width / 30)) {
 					newBlock = Instantiate(waterBlockPrefab, new(x, -0.2f, z), Quaternion.Euler(0f, 0f, 0f));
 					newBlock.tag = "Water";
 				} else {
@@ -135,43 +147,42 @@ public class MapHandler : MonoBehaviour {
 		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
 
 		int grassWidth = Mathf.RoundToInt(2 * riverHalfWidth);
+		
+		Vector3 originPoint;
+		Material mat;
 		foreach (GameObject ground in groundBlocks) {
-			foreach (GameObject water in waterBlocks) {
-				if (Mathf.Abs(ground.transform.position.x - water.transform.position.x) <= grassWidth && ground.transform.position.z == water.transform.position.z) {
-					Vector3 originPoint = GetNearestWaterTilePos(ground);
-					if (ground.transform.position.x < 0f) {
-						originPoint.x -= 1;
-					} else {
-						originPoint.y += 1;
-					}
-
-					/*
-					 * Creating a custom material here as part of the terrain blending from
-					 * grass to sand depending on the distance of the block to the nearest
-					 * river bank
-					 */
-					Material mat = new(grassShader);
-					mat.SetFloat("_Divisor", 8);
-					mat.SetVector("_Target_Position", originPoint);
-
-					ground.GetComponent<Renderer>().material = mat;
-					break;
+			originPoint = GetNearestWaterTilePos(ground);
+			if (Mathf.Abs(ground.transform.position.x - originPoint.x) <= grassWidth && ground.transform.position.z == originPoint.z) {
+				if (ground.transform.position.x < 0f) {
+					originPoint.x -= 1;
+				} else {
+					originPoint.x += 1;
 				}
+
+				/*
+				 * Creating a custom material here as part of the terrain blending from
+				 * grass to sand depending on the distance of the block to the nearest
+				 * river bank
+				 */
+				mat = new(grassShader);
+				mat.SetFloat("_Divisor", 8);
+				mat.SetVector("_Target_Position", originPoint);
+
+				ground.GetComponent<Renderer>().material = mat;
+				break;
 			}
 		}
 	}
 
 	// Get the position of the nearest water tile to a given ground block
 	private Vector3 GetNearestWaterTilePos(GameObject groundBlock) {
-		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
-
-		float distance = 1000000f;
+		float distance = Mathf.Infinity;
 		GameObject closest = null;
 		Vector3 waterPosition;
 		foreach (GameObject water in waterBlocks) {
 			waterPosition = new(water.transform.position.x, 0f, water.transform.position.z);
 
-			if (waterPosition.z >= groundBlock.transform.position.z - 1 && waterPosition.z <= groundBlock.transform.position.z + 1) {
+			if (Mathf.Abs(waterPosition.z - groundBlock.transform.position.z) <= Mathf.Sqrt(2)) {
 				if (Vector3.Distance(groundBlock.transform.position, waterPosition) < distance) {
 					distance = Mathf.Abs(groundBlock.transform.position.x - water.transform.position.x);
 					closest = water;
@@ -186,27 +197,21 @@ public class MapHandler : MonoBehaviour {
 	private void CameraCulling() {
 		groundBlocks = GameObject.FindGameObjectsWithTag("Ground");
 		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
+		
+		allBlocks = new GameObject[groundBlocks.Length + waterBlocks.Length];
+		groundBlocks.CopyTo(allBlocks, 0);
+		waterBlocks.CopyTo(allBlocks, groundBlocks.Length);
 
 		int layerMask = 1 << 3; // This makes sure the raycast only looks at layer 3 (terrain) by bit-shifting the index of the layer
 		if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out RaycastHit hit, Mathf.Infinity, layerMask)) {
 			Vector3 centre = hit.collider.gameObject.transform.position;
 
-			foreach (GameObject block in groundBlocks) {
-				Vector3 relativePosition = block.transform.position - centre;
-				float verticalFactor = (relativePosition.z + height * 0.5f) / height;
-				float halfWidthAtZ = Mathf.Lerp(bottomWidth * 0.5f, topWidth * 0.5f, verticalFactor);
-
-				if (relativePosition.z >= -height * 0.5f && relativePosition.z <= height * 0.5f && relativePosition.x >= -halfWidthAtZ && relativePosition.x <= halfWidthAtZ) {
-					block.GetComponent<Renderer>().enabled = true;
-				} else {
-					block.GetComponent<Renderer>().enabled = false;
-				}
-			}
-
-			foreach (GameObject block in waterBlocks) {
-				Vector3 relativePosition = block.transform.position - centre;
-				float verticalFactor = (relativePosition.z + height * 0.5f) / height;
-				float halfWidthAtZ = Mathf.Lerp(bottomWidth * 0.5f, topWidth * 0.5f, verticalFactor);
+			Vector3 relativePosition;
+			float verticalFactor, halfWidthAtZ;
+			foreach (GameObject block in allBlocks) {
+				relativePosition = block.transform.position - centre;
+				verticalFactor = (relativePosition.z + height * 0.5f) / height;
+				halfWidthAtZ = Mathf.Lerp(bottomWidth * 0.5f, topWidth * 0.5f, verticalFactor);
 
 				if (relativePosition.z >= -height * 0.5f && relativePosition.z <= height * 0.5f && relativePosition.x >= -halfWidthAtZ && relativePosition.x <= halfWidthAtZ) {
 					block.GetComponent<Renderer>().enabled = true;
@@ -321,15 +326,17 @@ public class MapHandler : MonoBehaviour {
 	private void BuildCompleteBuildables() {
 		placedBuildables = GameObject.FindGameObjectsWithTag("Buildable");
 
-		Buildable buildScript;
-		foreach (GameObject buildable in placedBuildables) {
-			buildScript = buildable.GetComponent<Buildable>();
+		if (placedBuildables.Length > 0) {
+			Buildable buildScript;
+			foreach (GameObject buildable in placedBuildables) {
+				buildScript = buildable.GetComponent<Buildable>();
 
-			if (buildScript.IsComplete()) {
-				if (buildScript.GetBuildType() == "Small House") {
-					Instantiate(smallHousePrefab, buildable.transform.position, buildable.transform.rotation);
-					Destroy(buildable);
-					break;
+				if (buildScript.IsComplete()) {
+					if (buildScript.GetBuildType() == "Small House") {
+						Instantiate(smallHousePrefab, buildable.transform.position, buildable.transform.rotation);
+						Destroy(buildable);
+						break;
+					}
 				}
 			}
 		}
