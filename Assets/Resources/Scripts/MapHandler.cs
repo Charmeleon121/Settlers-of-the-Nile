@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class MapHandler : MonoBehaviour {
 	// Prefabs and materials
@@ -25,14 +26,14 @@ public class MapHandler : MonoBehaviour {
 	private readonly Color earlyColor = new(0.84f, 0.37f, 0.03f);
 	private readonly Color dayColor = new(0.99f, 0.91f, 0.69f);
 	private readonly float daySpeed = 0.01f;
-	private float rotX = 0f;
+	private float rotX = 90f;
 	private int day = 1;
 
 	// Parameters for the ground culling with the camera
 	private readonly int topWidth = 28;
 	private readonly int bottomWidth = 18;
 	private readonly int height = 15;
-	
+
 	// The previous position of the camera
 	private Vector3 prevCameraPos;
 
@@ -60,7 +61,7 @@ public class MapHandler : MonoBehaviour {
 		sun = GameObject.Find("Sun");
 		sunlight = sun.GetComponent<Light>();
 		sun.transform.rotation = Quaternion.Euler(rotX, 0f, 0f);
-		
+
 		prevCameraPos = Camera.main.transform.position;
 
 		playerScript = GameObject.Find("Player").GetComponent<Player>();
@@ -68,10 +69,21 @@ public class MapHandler : MonoBehaviour {
 	}
 
 	/*
-	 * On Start, generate a map of a given size
+	 * On Start, generate a map of a given size, de-render all of the ground and water tiles,
+	 * then do an initial run of CameraCulling to make "visible" tiles actually show up
 	 */
 	void Start() {
 		GenerateMap(100, 100);
+
+		foreach (GameObject ground in groundBlocks) {
+			ground.GetComponent<Renderer>().enabled = false;
+		}
+
+		foreach (GameObject water in waterBlocks) {
+			water.GetComponent<Renderer>().enabled = false;
+		}
+
+		CameraCulling();
 	}
 
 	/*
@@ -84,11 +96,11 @@ public class MapHandler : MonoBehaviour {
 		if (Camera.main.transform.position != prevCameraPos) {
 			CameraCulling();
 		}
-		
+
 		DayProgression();
 		UpdateBuildGhostPos();
 		BuildCompleteBuildables();
-		
+
 		// Update the previous camera position
 		prevCameraPos = Camera.main.transform.position;
 	}
@@ -103,75 +115,81 @@ public class MapHandler : MonoBehaviour {
 		width = width % 2 == 0 ? width : width + 1;
 		length = length % 2 == 0 ? length : length + 1;
 
+		PlaceWaterBlocks(width, length);
+		PlaceGroundBlocks(width, length);
+		PlaceColonists(new(-6f, 0.6f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
+	}
+
+	// Place all of the water blocks for the river
+	private void PlaceWaterBlocks(int w, int l) {
 		GameObject newBlock;
-		for (int z = -length / 2; z < length / 2; ++z) {
+		for (int z = -l / 2; z < l / 2; ++z) {
 			int riverXPos = GetRiverTilePos(z);
 
-			for (int x = -width / 2; x < width / 2; ++x) {
-				if (x >= riverXPos - (width / 30) && x <= riverXPos + (width / 30)) {
+			for (int x = -w / 2; x < w / 2; ++x) {
+				if (x >= riverXPos - (w / 30) && x <= riverXPos + (w / 30)) {
 					newBlock = Instantiate(waterBlockPrefab, new(x, -0.2f, z), Quaternion.Euler(0f, 0f, 0f));
 					newBlock.tag = "Water";
-				} else {
-					newBlock = Instantiate(groundBlockPrefab, new(x, 0f, z), Quaternion.Euler(0f, 0f, 0f));
-					newBlock.tag = "Ground";
-					newBlock.GetComponent<MeshRenderer>().material = sandMaterial;
 				}
 			}
 		}
 
-		PlaceGrassTiles(width / 25);
+		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
+	}
 
-		// Start with 10 initial colonists
+	// Place all of the ground blocks around the river
+	private void PlaceGroundBlocks(int w, int l) {
+		GameObject newBlock;
+		for (int z = -l / 2; z < l / 2; ++z) {
+			int riverXPos = GetRiverTilePos(z);
+
+			for (int x = -w / 2; x < w / 2; ++x) {
+				if (x < riverXPos - (w / 30) || x > riverXPos + (w / 30)) {
+					newBlock = Instantiate(groundBlockPrefab, new(x, 0f, z), Quaternion.Euler(0f, 0f, 0f));
+					newBlock.tag = "Ground";
+
+					Vector3 originPoint = GetNearestWaterTilePos(newBlock);
+					if (newBlock.transform.position.x < 0f) {
+						originPoint.x -= 1;
+					} else {
+						originPoint.x += 1;
+					}
+
+					/*
+					 * Creating a custom material here as part of the terrain blending from
+					 * grass to sand depending on the distance of the block to the nearest
+					 * river bank
+					 */
+					Material mat = new(grassShader);
+					mat.SetFloat("_Divisor", w / 6f);
+					mat.SetVector("_Target_Position", originPoint);
+
+					newBlock.GetComponent<Renderer>().material = mat;
+				}
+			}
+		}
+
+		groundBlocks = GameObject.FindGameObjectsWithTag("Ground");
+	}
+
+	// Place a number of colonists in an area around a set centre point
+	private void PlaceColonists(Vector3 spawnCentre, int amount) {
 		string[] jobs = { "Unemployed", "Builder", "Farmer", "Miner" };
 
 		GameObject newColonist;
-		for (int i = 0; i < 10; ++i) {
-			int centreX = -6;
-			int centreZ = 12;
+		for (int i = 0; i < amount; ++i) {
+			float xPos = spawnCentre.x + Random.Range(-3, 3);
+			float zPos = spawnCentre.z + Random.Range(-7, 8);
 
-			int xPos = centreX + Random.Range(-3, 3);
-			int zPos = centreZ + Random.Range(-7, 8);
-
-			newColonist = Instantiate(colonistPrefab, new(xPos, 0.6f, zPos), Quaternion.Euler(0f, 0f, 0f));
+			newColonist = Instantiate(colonistPrefab, new(xPos, spawnCentre.y, zPos), Quaternion.Euler(0f, 0f, 0f));
 			newColonist.tag = "Colonist";
 
 			int index = Random.Range(0, jobs.Length);
 
 			newColonist.GetComponent<Colonist>().SetJob(jobs[index]);
 		}
-	}
 
-	// This function determines where grass tiles should be around the river edge
-	private void PlaceGrassTiles(float riverHalfWidth) {
-		groundBlocks = GameObject.FindGameObjectsWithTag("Ground");
-		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
-
-		int grassWidth = Mathf.RoundToInt(2 * riverHalfWidth);
-		
-		Vector3 originPoint;
-		Material mat;
-		foreach (GameObject ground in groundBlocks) {
-			originPoint = GetNearestWaterTilePos(ground);
-			if (Mathf.Abs(ground.transform.position.x - originPoint.x) <= grassWidth && ground.transform.position.z == originPoint.z) {
-				if (ground.transform.position.x < 0f) {
-					originPoint.x -= 1;
-				} else {
-					originPoint.x += 1;
-				}
-
-				/*
-				 * Creating a custom material here as part of the terrain blending from
-				 * grass to sand depending on the distance of the block to the nearest
-				 * river bank
-				 */
-				mat = new(grassShader);
-				mat.SetFloat("_Divisor", 8);
-				mat.SetVector("_Target_Position", originPoint);
-
-				ground.GetComponent<Renderer>().material = mat;
-				break;
-			}
-		}
+		colonists = GameObject.FindGameObjectsWithTag("Colonist");
 	}
 
 	// Get the position of the nearest water tile to a given ground block
@@ -180,11 +198,10 @@ public class MapHandler : MonoBehaviour {
 		GameObject closest = null;
 		Vector3 waterPosition;
 		foreach (GameObject water in waterBlocks) {
-			waterPosition = new(water.transform.position.x, 0f, water.transform.position.z);
-
-			if (Mathf.Abs(waterPosition.z - groundBlock.transform.position.z) <= Mathf.Sqrt(2)) {
+			if (water.transform.position.z == groundBlock.transform.position.z) {
+				waterPosition = new(water.transform.position.x, 0f, water.transform.position.z);
 				if (Vector3.Distance(groundBlock.transform.position, waterPosition) < distance) {
-					distance = Mathf.Abs(groundBlock.transform.position.x - water.transform.position.x);
+					distance = Mathf.Abs(groundBlock.transform.position.x - waterPosition.x);
 					closest = water;
 				}
 			}
@@ -197,7 +214,7 @@ public class MapHandler : MonoBehaviour {
 	private void CameraCulling() {
 		groundBlocks = GameObject.FindGameObjectsWithTag("Ground");
 		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
-		
+
 		allBlocks = new GameObject[groundBlocks.Length + waterBlocks.Length];
 		groundBlocks.CopyTo(allBlocks, 0);
 		waterBlocks.CopyTo(allBlocks, groundBlocks.Length);
