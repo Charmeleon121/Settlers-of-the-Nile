@@ -5,7 +5,7 @@ public class MapHandler : MonoBehaviour {
 	// Prefabs and materials
 	private GameObject groundBlockPrefab, waterBlockPrefab, colonistPrefab, smallHousePrefab;
 	private GameObject ghostSmallHousePrefab;
-	private Material ghostMaterial, ghostErrorMaterial, sandMaterial;
+	private Material ghostMaterial, ghostErrorMaterial;
 	private Shader grassShader;
 
 	// All ground blocks and water blocks
@@ -55,7 +55,6 @@ public class MapHandler : MonoBehaviour {
 
 		ghostMaterial = Resources.Load<Material>("Materials/Ghost Material");
 		ghostErrorMaterial = Resources.Load<Material>("Materials/Ghost Error Material");
-		sandMaterial = Resources.Load<Material>("Materials/Sand Material");
 		grassShader = Resources.Load<Shader>("Materials/Grass Shader");
 
 		sun = GameObject.Find("Sun");
@@ -97,7 +96,7 @@ public class MapHandler : MonoBehaviour {
 			CameraCulling();
 		}
 
-		DayProgression();
+		//DayProgression();
 		UpdateBuildGhostPos();
 		BuildCompleteBuildables();
 
@@ -150,16 +149,11 @@ public class MapHandler : MonoBehaviour {
 
 					Vector3 originPoint = GetNearestWaterTilePos(newBlock);
 					if (newBlock.transform.position.x < 0f) {
-						originPoint.x -= 1;
+						originPoint.x -= 1f;
 					} else {
-						originPoint.x += 1;
+						originPoint.x -= 1f;
 					}
 
-					/*
-					 * Creating a custom material here as part of the terrain blending from
-					 * grass to sand depending on the distance of the block to the nearest
-					 * river bank
-					 */
 					Material mat = new(grassShader);
 					mat.SetFloat("_Divisor", w / 6f);
 					mat.SetVector("_Target_Position", originPoint);

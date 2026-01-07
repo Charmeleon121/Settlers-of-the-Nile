@@ -7,6 +7,8 @@ public class Colonist : MonoBehaviour {
 	private readonly float speed = 5f;
 
 	private Task currentTask;
+	
+	private GameObject house;
 
 	private readonly int[] inventory = { 0, 0 }; // Dirt, sandstone,
 
@@ -19,7 +21,7 @@ public class Colonist : MonoBehaviour {
 		colonistName = "Steven";    // Placeholder for now
 		
 		colonistHealth = 100;	// When this hits 0, the colonist dies
-		colonistHunger = 0;		// When this hits 100, they are "starving" and will take damage
+		colonistHunger = 0;	// When this hits 100, they are "starving" and will take damage
 		colonistThirst = 0;		// When this hits 100, they are "dehydrated" and will take damage
 		colonistEnergy = 100;	// When this hits 0, they will pass out and become useless until rested
 	}
@@ -171,5 +173,9 @@ public class Colonist : MonoBehaviour {
 
 	public void SetTask(Task newTask) {
 		currentTask = newTask;
+	}
+	
+	public void SetHouse(GameObject newHouse) {
+		house = newHouse;
 	}
 }
