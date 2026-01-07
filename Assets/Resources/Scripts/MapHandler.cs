@@ -151,7 +151,7 @@ public class MapHandler : MonoBehaviour {
 					if (newBlock.transform.position.x < 0f) {
 						originPoint.x -= 1f;
 					} else {
-						originPoint.x -= 1f;
+						originPoint.x += 1f;
 					}
 
 					Material mat = new(grassShader);
