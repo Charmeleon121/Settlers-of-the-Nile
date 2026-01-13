@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MapHandler : MonoBehaviour {
@@ -12,7 +13,9 @@ public class MapHandler : MonoBehaviour {
 	private Shader grassShader;
 
 	// All ground blocks and water blocks
-	private GameObject[] groundBlocks, waterBlocks, allBlocks;
+	private readonly List<GameObject> groundBlocks = new();
+	private readonly List<GameObject> waterBlocks = new();
+	private readonly List<GameObject> terrainBlocks = new();
 
 	// All ghost blocks
 	private GameObject[] ghostObjects;
@@ -28,8 +31,8 @@ public class MapHandler : MonoBehaviour {
 	private Light sunlight;
 	private readonly Color earlyColor = new(0.84f, 0.37f, 0.03f);
 	private readonly Color dayColor = new(0.99f, 0.91f, 0.69f);
-	private readonly float daySpeed = 0.01f;
-	private float rotX = 90f;
+	private readonly float daySpeed = 0.05f;
+	private float rotX = 0f;
 	private int day = 1;
 
 	// Parameters for the ground culling with the camera
@@ -40,6 +43,7 @@ public class MapHandler : MonoBehaviour {
 	// Other scripts
 	private Player playerScript;
 	private NPCHandler npcHandler;
+	private UIHandler uiHandler;
 
 	/*
 	 * On Awake, initialize all prefab variables, material/shader variables, external
@@ -63,6 +67,7 @@ public class MapHandler : MonoBehaviour {
 
 		playerScript = GameObject.Find("Player").GetComponent<Player>();
 		npcHandler = GameObject.Find("EventSystem").GetComponent<NPCHandler>();
+		uiHandler = GameObject.Find("EventSystem").GetComponent<UIHandler>();
 	}
 
 	/*
@@ -70,18 +75,7 @@ public class MapHandler : MonoBehaviour {
 	 * then begin the CameraCulling and the DayProgression
 	 */
 	void Start() {
-		GenerateMap(100, 100);
-
-		foreach (GameObject ground in groundBlocks) {
-			ground.GetComponent<Renderer>().enabled = false;
-		}
-
-		foreach (GameObject water in waterBlocks) {
-			water.GetComponent<Renderer>().enabled = false;
-		}
-
-		StartCoroutine(CameraCulling());		// Begin handling the camera culling
-		StartCoroutine(DayProgression());		// Begin the day/time progression
+		StartCoroutine(StartupSequence());
 	}
 
 	/*
@@ -93,23 +87,42 @@ public class MapHandler : MonoBehaviour {
 		BuildCompleteBuildables();
 	}
 
+	// Startup sequence
+	private IEnumerator StartupSequence() {
+		yield return StartCoroutine(GenerateMap(100, 100));
+
+		PlaceColonists(new(-6f, 0.4f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
+
+		yield return StartCoroutine(uiHandler.CloseLoadingScreen());
+
+		StartCoroutine(CameraCulling());         // Begin handling the camera culling
+		StartCoroutine(DayProgression());        // Begin the day/time progression
+	}
+
 	// A sinusoidal function to determine the shape/length of the river
 	private float GetRiverTilePos(float zPos) {
 		return 2f * Mathf.Sin(zPos / 8f) + (Mathf.Cos(10f * zPos) / 20f);
 	}
 
 	// The map is generated in this function
-	private void GenerateMap(int width, int length) {
+	private IEnumerator GenerateMap(int width, int length) {
 		width = width % 2 == 0 ? width : width + 1;
 		length = length % 2 == 0 ? length : length + 1;
 
-		PlaceWaterBlocks(width, length);
-		PlaceGroundBlocks(width, length);
-		PlaceColonists(new(-6f, 0.4f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
+		yield return StartCoroutine(PlaceWaterBlocks(width, length));
+		yield return StartCoroutine(PlaceGroundBlocks(width, length));
+
+		foreach (GameObject ground in groundBlocks) {
+			ground.GetComponent<Renderer>().enabled = false;
+		}
+
+		foreach (GameObject water in waterBlocks) {
+			water.GetComponent<Renderer>().enabled = false;
+		}
 	}
 
 	// Place all of the water blocks for the river
-	private void PlaceWaterBlocks(int w, int l) {
+	private IEnumerator PlaceWaterBlocks(int w, int l) {
 		GameObject newBlock;
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
 			float riverXPos = GetRiverTilePos(z);
@@ -118,15 +131,18 @@ public class MapHandler : MonoBehaviour {
 				if (x >= riverXPos - (w / 30) && x <= riverXPos + (w / 30)) {
 					newBlock = Instantiate(waterBlockPrefab, new(x, -0.2f, z), Quaternion.Euler(0f, 0f, 0f));
 					newBlock.tag = "Water";
+
+					waterBlocks.Add(newBlock);
+					terrainBlocks.Add(newBlock);
 				}
 			}
-		}
 
-		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
+			yield return null;
+		}
 	}
 
 	// Place all of the ground blocks around the river
-	private void PlaceGroundBlocks(int w, int l) {
+	private IEnumerator PlaceGroundBlocks(int w, int l) {
 		GameObject newBlock;
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
 			float riverXPos = GetRiverTilePos(z);
@@ -150,11 +166,14 @@ public class MapHandler : MonoBehaviour {
 					mat.SetVector("_Target_Position", originPoint);
 
 					newBlock.GetComponent<Renderer>().material = mat;
+
+					groundBlocks.Add(newBlock);
+					terrainBlocks.Add(newBlock);
 				}
 			}
-		}
 
-		groundBlocks = GameObject.FindGameObjectsWithTag("Ground");
+			yield return null;
+		}
 	}
 
 	// Place a number of colonists in an area around a set centre point
@@ -198,17 +217,13 @@ public class MapHandler : MonoBehaviour {
 	// This function hides any ground/water block that is not currently within the camera's view
 	private IEnumerator CameraCulling() {
 		while (true) {
-			allBlocks = new GameObject[groundBlocks.Length + waterBlocks.Length];
-			groundBlocks.CopyTo(allBlocks, 0);
-			waterBlocks.CopyTo(allBlocks, groundBlocks.Length);
-
 			int layerMask = 1 << 3; // This makes sure the raycast only looks at layer 3 (terrain) by bit-shifting the index of the layer
 			if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out RaycastHit hit, Mathf.Infinity, layerMask)) {
 				Vector3 centre = hit.collider.gameObject.transform.position;
 
 				Vector3 relativePosition;
 				float verticalFactor, halfWidthAtZ;
-				foreach (GameObject block in allBlocks) {
+				foreach (GameObject block in terrainBlocks) {
 					relativePosition = block.transform.position - centre;
 					verticalFactor = (relativePosition.z + height * 0.5f) / height;
 					halfWidthAtZ = Mathf.Lerp(bottomWidth * 0.5f, topWidth * 0.5f, verticalFactor);

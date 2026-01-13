@@ -1,5 +1,7 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class UIHandler : MonoBehaviour {
@@ -15,8 +17,17 @@ public class UIHandler : MonoBehaviour {
 	private GameObject colonistPropertyDisplay;
 	public TextMeshProUGUI colonistNameLabel, colonistJobLabel;
 
+	// Loading screen components
+	public GameObject loadingScreen;
+	public RawImage loadingSymbol;
+
 	private Player playerScript;
 	private MapHandler mapHandler;
+
+	void Awake() {
+		loadingScreen.transform.position = new(960f, 540f, 0f);
+		loadingScreen.GetComponent<Image>().color = new(0f, 0f, 0f, 1f);
+	}
 
 	void Start() {
 		fpsDisplay = GameObject.Find("FPS Display").GetComponent<TextMeshProUGUI>();
@@ -36,6 +47,8 @@ public class UIHandler : MonoBehaviour {
 
 		playerScript = GameObject.Find("Player").GetComponent<Player>();
 		mapHandler = GameObject.Find("EventSystem").GetComponent<MapHandler>();
+
+		StartCoroutine(RotateLoadingSymbol());
 	}
 
 	void Update() {
@@ -99,5 +112,28 @@ public class UIHandler : MonoBehaviour {
 	public void HideNPCDisplay() {
 		float xPos = colonistPropertyDisplay.transform.position.x;
 		colonistPropertyDisplay.transform.position = new(xPos, -280f);
+	}
+
+	// Open the loading screen slowly, then transition to the game world scene
+	public IEnumerator CloseLoadingScreen() {
+		while (loadingScreen.GetComponent<Image>().color.a > 0.1f) {
+			float newAlpha = Mathf.Lerp(loadingScreen.GetComponent<Image>().color.a, 0f, 0.1f);
+			loadingScreen.GetComponent<Image>().color = new(0f, 0f, 0f, newAlpha);
+
+			yield return null;
+		}
+
+		loadingScreen.GetComponent<Image>().color = new(0f, 0f, 0f, 0f);
+		loadingScreen.transform.position = new(960f, -540f, 0f);
+		yield return null;
+	}
+
+	// Rotate the loading symbol
+	private IEnumerator RotateLoadingSymbol() {
+		while (true) {
+			float zRot = loadingSymbol.transform.rotation.eulerAngles.z;
+			loadingSymbol.transform.rotation = Quaternion.Euler(0f, 0f, --zRot);
+			yield return null;
+		}
 	}
 }
