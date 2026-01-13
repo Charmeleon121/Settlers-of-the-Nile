@@ -105,8 +105,8 @@ public class MapHandler : MonoBehaviour {
 	}
 
 	// A sinusoidal function to determine the shape/length of the river
-	private int GetRiverTilePos(float zPos) {
-		return Mathf.RoundToInt(2f * Mathf.Sin(zPos / 8f) + (Mathf.Cos(10f * zPos) / 20f));
+	private float GetRiverTilePos(float zPos) {
+		return 2f * Mathf.Sin(zPos / 8f) + (Mathf.Cos(10f * zPos) / 20f);
 	}
 
 	// The map is generated in this function
@@ -116,16 +116,16 @@ public class MapHandler : MonoBehaviour {
 
 		PlaceWaterBlocks(width, length);
 		PlaceGroundBlocks(width, length);
-		PlaceColonists(new(-6f, 0.6f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
+		PlaceColonists(new(-6f, 0.4f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
 	}
 
 	// Place all of the water blocks for the river
 	private void PlaceWaterBlocks(int w, int l) {
 		GameObject newBlock;
-		for (int z = -l / 2; z < l / 2; ++z) {
-			int riverXPos = GetRiverTilePos(z);
+		for (float z = -l / 2; z < l / 2; z += 0.5f) {
+			float riverXPos = GetRiverTilePos(z);
 
-			for (int x = -w / 2; x < w / 2; ++x) {
+			for (float x = -w / 2; x < w / 2; x += 0.5f) {
 				if (x >= riverXPos - (w / 30) && x <= riverXPos + (w / 30)) {
 					newBlock = Instantiate(waterBlockPrefab, new(x, -0.2f, z), Quaternion.Euler(0f, 0f, 0f));
 					newBlock.tag = "Water";
@@ -139,19 +139,19 @@ public class MapHandler : MonoBehaviour {
 	// Place all of the ground blocks around the river
 	private void PlaceGroundBlocks(int w, int l) {
 		GameObject newBlock;
-		for (int z = -l / 2; z < l / 2; ++z) {
-			int riverXPos = GetRiverTilePos(z);
+		for (float z = -l / 2; z < l / 2; z += 0.5f) {
+			float riverXPos = GetRiverTilePos(z);
 
-			for (int x = -w / 2; x < w / 2; ++x) {
+			for (float x = -w / 2; x < w / 2; x += 0.5f) {
 				if (x < riverXPos - (w / 30) || x > riverXPos + (w / 30)) {
 					newBlock = Instantiate(groundBlockPrefab, new(x, 0f, z), Quaternion.Euler(0f, 0f, 0f));
 					newBlock.tag = "Ground";
 
 					Vector3 originPoint = GetNearestWaterTilePos(newBlock);
 					if (newBlock.transform.position.x < 0f) {
-						originPoint.x -= 1f;
+						originPoint.x -= 0.5f;
 					} else {
-						originPoint.x += 1f;
+						originPoint.x += 0.5f;
 					}
 
 					Material mat = new(grassShader);
@@ -306,7 +306,7 @@ public class MapHandler : MonoBehaviour {
 		} else {
 			// Enter into placement mode
 			if (target == "Small House") {
-				GameObject ghostHouse = Instantiate(ghostSmallHousePrefab, new(0f, 0.6f, 0f), Quaternion.Euler(0f, 0f, 0f));
+				GameObject ghostHouse = Instantiate(ghostSmallHousePrefab, new(0f, 0.4f, 0f), Quaternion.Euler(0f, 0f, 0f));
 				ghostHouse.tag = "Ghost";
 				playerScript.SetBuildTarget("Small House");
 			}
