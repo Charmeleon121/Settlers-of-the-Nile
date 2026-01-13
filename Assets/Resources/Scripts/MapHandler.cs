@@ -1,7 +1,10 @@
+using System.Collections;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class MapHandler : MonoBehaviour {
+	// Time for enumerators to wait
+	private static readonly WaitForSeconds enumeratorWaitTime = new(0.1f);
+
 	// Prefabs and materials
 	private GameObject groundBlockPrefab, waterBlockPrefab, colonistPrefab, smallHousePrefab;
 	private GameObject ghostSmallHousePrefab;
@@ -34,9 +37,6 @@ public class MapHandler : MonoBehaviour {
 	private readonly int bottomWidth = 18;
 	private readonly int height = 15;
 
-	// The previous position of the camera
-	private Vector3 prevCameraPos;
-
 	// Other scripts
 	private Player playerScript;
 	private NPCHandler npcHandler;
@@ -61,15 +61,13 @@ public class MapHandler : MonoBehaviour {
 		sunlight = sun.GetComponent<Light>();
 		sun.transform.rotation = Quaternion.Euler(rotX, 0f, 0f);
 
-		prevCameraPos = Camera.main.transform.position;
-
 		playerScript = GameObject.Find("Player").GetComponent<Player>();
 		npcHandler = GameObject.Find("EventSystem").GetComponent<NPCHandler>();
 	}
 
 	/*
 	 * On Start, generate a map of a given size, de-render all of the ground and water tiles,
-	 * then do an initial run of CameraCulling to make "visible" tiles actually show up
+	 * then begin the CameraCulling and the DayProgression
 	 */
 	void Start() {
 		GenerateMap(100, 100);
@@ -82,26 +80,17 @@ public class MapHandler : MonoBehaviour {
 			water.GetComponent<Renderer>().enabled = false;
 		}
 
-		CameraCulling();
+		StartCoroutine(CameraCulling());		// Begin handling the camera culling
+		StartCoroutine(DayProgression());		// Begin the day/time progression
 	}
 
 	/*
-	 * Every frame, handle the camera culling so out-of-view ground blocks are de-rendered,
-	 * progress the day and angle of the sun, update any build ghosts, and build any objects
-	 * which have an associated task marked as complete
+	 * Update the position of any build ghosts, and build any objects which have an associated
+	 * task marked as complete
 	 */
 	void Update() {
-		// Only update the culling if the camera moved
-		if (Camera.main.transform.position != prevCameraPos) {
-			CameraCulling();
-		}
-
-		//DayProgression();
 		UpdateBuildGhostPos();
 		BuildCompleteBuildables();
-
-		// Update the previous camera position
-		prevCameraPos = Camera.main.transform.position;
 	}
 
 	// A sinusoidal function to determine the shape/length of the river
@@ -205,64 +194,69 @@ public class MapHandler : MonoBehaviour {
 	}
 
 	// This function hides any ground/water block that is not currently within the camera's view
-	private void CameraCulling() {
-		groundBlocks = GameObject.FindGameObjectsWithTag("Ground");
-		waterBlocks = GameObject.FindGameObjectsWithTag("Water");
+	private IEnumerator CameraCulling() {
+		while (true) {
+			allBlocks = new GameObject[groundBlocks.Length + waterBlocks.Length];
+			groundBlocks.CopyTo(allBlocks, 0);
+			waterBlocks.CopyTo(allBlocks, groundBlocks.Length);
 
-		allBlocks = new GameObject[groundBlocks.Length + waterBlocks.Length];
-		groundBlocks.CopyTo(allBlocks, 0);
-		waterBlocks.CopyTo(allBlocks, groundBlocks.Length);
+			int layerMask = 1 << 3; // This makes sure the raycast only looks at layer 3 (terrain) by bit-shifting the index of the layer
+			if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out RaycastHit hit, Mathf.Infinity, layerMask)) {
+				Vector3 centre = hit.collider.gameObject.transform.position;
 
-		int layerMask = 1 << 3; // This makes sure the raycast only looks at layer 3 (terrain) by bit-shifting the index of the layer
-		if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out RaycastHit hit, Mathf.Infinity, layerMask)) {
-			Vector3 centre = hit.collider.gameObject.transform.position;
+				Vector3 relativePosition;
+				float verticalFactor, halfWidthAtZ;
+				foreach (GameObject block in allBlocks) {
+					relativePosition = block.transform.position - centre;
+					verticalFactor = (relativePosition.z + height * 0.5f) / height;
+					halfWidthAtZ = Mathf.Lerp(bottomWidth * 0.5f, topWidth * 0.5f, verticalFactor);
 
-			Vector3 relativePosition;
-			float verticalFactor, halfWidthAtZ;
-			foreach (GameObject block in allBlocks) {
-				relativePosition = block.transform.position - centre;
-				verticalFactor = (relativePosition.z + height * 0.5f) / height;
-				halfWidthAtZ = Mathf.Lerp(bottomWidth * 0.5f, topWidth * 0.5f, verticalFactor);
-
-				if (relativePosition.z >= -height * 0.5f && relativePosition.z <= height * 0.5f && relativePosition.x >= -halfWidthAtZ && relativePosition.x <= halfWidthAtZ) {
-					block.GetComponent<Renderer>().enabled = true;
-				} else {
-					block.GetComponent<Renderer>().enabled = false;
+					if (relativePosition.z >= -height * 0.5f && relativePosition.z <= height * 0.5f && relativePosition.x >= -halfWidthAtZ && relativePosition.x <= halfWidthAtZ) {
+						block.GetComponent<Renderer>().enabled = true;
+					} else {
+						block.GetComponent<Renderer>().enabled = false;
+					}
 				}
 			}
+
+			yield return enumeratorWaitTime;
 		}
 	}
 
 	// Progress the day, as well as adjusting the sun's intensity and color accordingly
-	private void DayProgression() {
-		if (rotX >= 360f) {
-			rotX = 0f;
-			++day;
-		} else {
-			rotX += daySpeed;
-		}
+	private IEnumerator DayProgression() {
+		while (true) {
+			if (rotX >= 360f) {
+				rotX = 0f;
+				++day;
+			} else {
+				rotX += daySpeed;
+			}
 
-		if (rotX <= 18f || rotX >= 162f) {
-			sunlight.color = earlyColor;
-		} else if (rotX > 18f && rotX <= 40f) {
-			sunlight.color = Color.Lerp(earlyColor, dayColor, (rotX - 18f) / 22f);
-		} else if (rotX >= 120f && rotX < 162f) {
-			sunlight.color = Color.Lerp(dayColor, earlyColor, (rotX - 120f) / 42f);
-		} else {
-			sunlight.color = dayColor;
-		}
+			if (rotX <= 18f || rotX >= 162f) {
+				sunlight.color = earlyColor;
+			} else if (rotX > 18f && rotX <= 40f) {
+				sunlight.color = Color.Lerp(earlyColor, dayColor, (rotX - 18f) / 22f);
+			} else if (rotX >= 120f && rotX < 162f) {
+				sunlight.color = Color.Lerp(dayColor, earlyColor, (rotX - 120f) / 42f);
+			} else {
+				sunlight.color = dayColor;
+			}
 
-		if (((rotX - 360 >= -5f || rotX > 0f) && rotX < 18f) || (rotX > 162f && rotX < 185f)) {
-			sunlight.intensity = 0.5f;
-		} else if (rotX > 18f && rotX < 90f) {
-			sunlight.intensity = Mathf.Lerp(0.5f, 1f, (rotX - 18f) / 72f);
-		} else if (rotX > 90f && rotX < 162f) {
-			sunlight.intensity = Mathf.Lerp(1f, 0.5f, (rotX - 90f) / 72f);
-		} else {
-			sunlight.intensity = 0f;
-		}
+			if (((rotX - 360 >= -5f || rotX > 0f) && rotX < 18f) || (rotX > 162f && rotX < 185f)) {
+				sunlight.intensity = 0.5f;
+			} else if (rotX > 18f && rotX < 90f) {
+				sunlight.intensity = Mathf.Lerp(0.5f, 1f, (rotX - 18f) / 72f);
+			} else if (rotX > 90f && rotX < 162f) {
+				sunlight.intensity = Mathf.Lerp(1f, 0.5f, (rotX - 90f) / 72f);
+			} else {
+				sunlight.intensity = 0f;
+			}
 
-		sun.transform.rotation = Quaternion.Euler(rotX, 90f, 90f);
+			sun.transform.rotation = Quaternion.Euler(rotX, 90f, 90f);
+
+			yield return enumeratorWaitTime;
+		}
 	}
 
 	// Ensure the active build ghost follows the cursor so the player can place it
