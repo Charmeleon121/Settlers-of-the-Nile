@@ -47,6 +47,12 @@ public class Player : MonoBehaviour {
 			}
 		}
 
+		if (input.Gameplay.Deselect.triggered) {
+			if (buildTarget != "Nothing") {
+				mapHandler.ExitBuildMode();
+			}
+		}
+
 		if (!isPaused) {
 			if (buildTarget != "Nothing") {
 				if (input.Gameplay.Rotate.triggered) {
@@ -113,7 +119,7 @@ public class Player : MonoBehaviour {
 		Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
 
 		if (Physics.Raycast(ray, out RaycastHit hit)) {
-			return new(Mathf.RoundToInt(hit.point.x), 0.6f, Mathf.RoundToInt(hit.point.z));
+			return new(Mathf.RoundToInt(hit.point.x), 0.3f, Mathf.RoundToInt(hit.point.z));
 		}
 
 		return Vector3.zero;

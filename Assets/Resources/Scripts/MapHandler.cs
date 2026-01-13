@@ -131,19 +131,21 @@ public class MapHandler : MonoBehaviour {
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
 			float riverXPos = GetRiverTilePos(z);
 
+			Vector3 originPoint;
+			Material mat;
 			for (float x = -w / 2; x < w / 2; x += 0.5f) {
 				if (x < riverXPos - (w / 30) || x > riverXPos + (w / 30)) {
 					newBlock = Instantiate(groundBlockPrefab, new(x, 0f, z), Quaternion.Euler(0f, 0f, 0f));
 					newBlock.tag = "Ground";
 
-					Vector3 originPoint = GetNearestWaterTilePos(newBlock);
+					originPoint = GetNearestWaterTilePos(newBlock);
 					if (newBlock.transform.position.x < 0f) {
 						originPoint.x -= 0.5f;
 					} else {
 						originPoint.x += 0.5f;
 					}
 
-					Material mat = new(grassShader);
+					mat = new(grassShader);
 					mat.SetFloat("_Divisor", w / 6f);
 					mat.SetVector("_Target_Position", originPoint);
 

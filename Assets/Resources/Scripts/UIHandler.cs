@@ -18,13 +18,6 @@ public class UIHandler : MonoBehaviour {
 	private Player playerScript;
 	private MapHandler mapHandler;
 
-	void Awake() {
-		Application.targetFrameRate = 165;	// Target FPS - for now, set to 165
-
-		QualitySettings.vSyncCount = 1;		// 0 - disable | 1 - enable
-		QualitySettings.antiAliasing = 0;	// Options are: 0, 2, 4, 8
-	}
-
 	void Start() {
 		fpsDisplay = GameObject.Find("FPS Display").GetComponent<TextMeshProUGUI>();
 		fpsTimer = 0;

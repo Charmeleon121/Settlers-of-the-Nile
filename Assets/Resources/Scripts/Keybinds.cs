@@ -138,6 +138,15 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
+                    ""name"": ""Deselect"",
+                    ""type"": ""Button"",
+                    ""id"": ""83e19a73-81ae-47b3-89ba-98eaa679b744"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""Pause"",
                     ""type"": ""Button"",
                     ""id"": ""a15c32cb-1f85-4325-a332-1e354a21542c"",
@@ -253,6 +262,17 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
                     ""action"": ""Flip"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""c36fcd87-2d51-4f3b-bea0-adcf53aa4dfe"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Deselect"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -266,6 +286,7 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
         m_Gameplay_Left = m_Gameplay.FindAction("Left", throwIfNotFound: true);
         m_Gameplay_Right = m_Gameplay.FindAction("Right", throwIfNotFound: true);
         m_Gameplay_Select = m_Gameplay.FindAction("Select", throwIfNotFound: true);
+        m_Gameplay_Deselect = m_Gameplay.FindAction("Deselect", throwIfNotFound: true);
         m_Gameplay_Pause = m_Gameplay.FindAction("Pause", throwIfNotFound: true);
         m_Gameplay_Rotate = m_Gameplay.FindAction("Rotate", throwIfNotFound: true);
         m_Gameplay_Flip = m_Gameplay.FindAction("Flip", throwIfNotFound: true);
@@ -354,6 +375,7 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_Left;
     private readonly InputAction m_Gameplay_Right;
     private readonly InputAction m_Gameplay_Select;
+    private readonly InputAction m_Gameplay_Deselect;
     private readonly InputAction m_Gameplay_Pause;
     private readonly InputAction m_Gameplay_Rotate;
     private readonly InputAction m_Gameplay_Flip;
@@ -388,6 +410,10 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/Select".
         /// </summary>
         public InputAction @Select => m_Wrapper.m_Gameplay_Select;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/Deselect".
+        /// </summary>
+        public InputAction @Deselect => m_Wrapper.m_Gameplay_Deselect;
         /// <summary>
         /// Provides access to the underlying input action "Gameplay/Pause".
         /// </summary>
@@ -441,6 +467,9 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
             @Select.started += instance.OnSelect;
             @Select.performed += instance.OnSelect;
             @Select.canceled += instance.OnSelect;
+            @Deselect.started += instance.OnDeselect;
+            @Deselect.performed += instance.OnDeselect;
+            @Deselect.canceled += instance.OnDeselect;
             @Pause.started += instance.OnPause;
             @Pause.performed += instance.OnPause;
             @Pause.canceled += instance.OnPause;
@@ -476,6 +505,9 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
             @Select.started -= instance.OnSelect;
             @Select.performed -= instance.OnSelect;
             @Select.canceled -= instance.OnSelect;
+            @Deselect.started -= instance.OnDeselect;
+            @Deselect.performed -= instance.OnDeselect;
+            @Deselect.canceled -= instance.OnDeselect;
             @Pause.started -= instance.OnPause;
             @Pause.performed -= instance.OnPause;
             @Pause.canceled -= instance.OnPause;
@@ -560,6 +592,13 @@ public partial class @Keybinds: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnSelect(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Deselect" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnDeselect(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Pause" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
