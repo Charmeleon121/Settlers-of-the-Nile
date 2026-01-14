@@ -143,12 +143,14 @@ public class MapHandler : MonoBehaviour {
 
 	// Place all of the ground blocks around the river
 	private IEnumerator PlaceGroundBlocks(int w, int l) {
+		Material mat = new(grassShader);
+		mat.SetFloat("_Divisor", w / 6f);
+		
 		GameObject newBlock;
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
 			float riverXPos = GetRiverTilePos(z);
 
 			Vector3 originPoint;
-			Material mat;
 			for (float x = -w / 2; x < w / 2; x += 0.5f) {
 				if (x < riverXPos - (w / 30) || x > riverXPos + (w / 30)) {
 					newBlock = Instantiate(groundBlockPrefab, new(x, 0f, z), Quaternion.Euler(0f, 0f, 0f));
@@ -161,10 +163,7 @@ public class MapHandler : MonoBehaviour {
 						originPoint.x += 0.5f;
 					}
 
-					mat = new(grassShader);
-					mat.SetFloat("_Divisor", w / 6f);
 					mat.SetVector("_Target_Position", originPoint);
-
 					newBlock.GetComponent<Renderer>().material = mat;
 
 					groundBlocks.Add(newBlock);

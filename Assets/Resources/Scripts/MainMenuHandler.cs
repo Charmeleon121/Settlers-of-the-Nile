@@ -9,8 +9,8 @@ public class MainMenuHandler : MonoBehaviour {
 	// Version and update related information
 	private readonly string majorVersion = "0";		// Increment for major game updates
 	private readonly string minorVersion = "00";	// Increment when significant features added
-	private readonly string bugFixVersion = "009";	// Number of Git commits since last update
-	private readonly DateTime releaseDate = new(2026, 1, 13);
+	private readonly string bugFixVersion = "011";	// Number of Git commits since last update
+	private readonly DateTime releaseDate = new(2026, 1, 14);
 	public TextMeshProUGUI versionInfo;
 
 	// Options menu components
@@ -58,7 +58,7 @@ public class MainMenuHandler : MonoBehaviour {
 	public void ApplySettings() {
 		if (fpsInputField.text.Length > 0) {
 			try {
-				Application.targetFrameRate = int.Parse(fpsInputField.text);
+				Application.targetFrameRate = Mathf.Abs(int.Parse(fpsInputField.text));
 			} catch (FormatException) {
 				Application.targetFrameRate = 60;	// Assuming the player entered non-numeric characters, default to 60
 			}
