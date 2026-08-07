@@ -90,7 +90,7 @@ public class MapHandler : MonoBehaviour {
 
 	// Startup sequence
 	private IEnumerator StartupSequence() {
-		// Currently takes ~2m11s to load on low-end hardware! Needs MAJOR optimization!
+		// Currently takes ~1m44s to load on low-end hardware! Needs MAJOR optimization!
 		yield return StartCoroutine(GenerateMap(100, 100));
 
 		PlaceColonists(new(-6f, 0.4f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
@@ -123,9 +123,11 @@ public class MapHandler : MonoBehaviour {
 			water.GetComponent<Renderer>().enabled = false;
 		}
 	}
-
+	
 	// Place all of the water blocks for the river
 	private IEnumerator PlaceWaterBlocks(int w, int l) {
+		uiHandler.UpdateLoadingText("Generating river...");
+		
 		GameObject newBlock;
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
 			float riverXPos = GetRiverTilePos(z);
@@ -133,19 +135,20 @@ public class MapHandler : MonoBehaviour {
 			for (float x = -w / 2; x < w / 2; x += 0.5f) {
 				if (x >= riverXPos - (w / 30) && x <= riverXPos + (w / 30)) {
 					newBlock = Instantiate(waterBlockPrefab, new(x, -0.2f, z), Quaternion.Euler(0f, 0f, 0f));
-					newBlock.tag = "Water";
 
 					waterBlocks.Add(newBlock);
 					terrainBlocks.Add(newBlock);
 				}
 			}
-
-			yield return null;
 		}
+		
+		yield return null;
 	}
 
 	// Place all of the ground blocks around the river
 	private IEnumerator PlaceGroundBlocks(int w, int l) {
+		uiHandler.UpdateLoadingText("Generating land...");
+		
 		GameObject newBlock;
 		
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
@@ -159,13 +162,15 @@ public class MapHandler : MonoBehaviour {
 					terrainBlocks.Add(newBlock);
 				}
 			}
-
-			yield return null;
 		}
+		
+		yield return null;
 	}
 	
 	// Apply material to every ground block
 	private IEnumerator ApplyMatToGroundBlocks(int w) {
+		uiHandler.UpdateLoadingText("Applying ground textures...");
+		
 		Material mat;
 		Vector3 originPoint;
 		

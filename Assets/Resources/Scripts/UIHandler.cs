@@ -19,6 +19,7 @@ public class UIHandler : MonoBehaviour {
 
 	// Loading screen components
 	public GameObject loadingScreen;
+	public TextMeshProUGUI loadingText;
 	public RawImage loadingSymbol;
 
 	private Player playerScript;
@@ -112,6 +113,10 @@ public class UIHandler : MonoBehaviour {
 	public void HideNPCDisplay() {
 		float xPos = colonistPropertyDisplay.transform.position.x;
 		colonistPropertyDisplay.transform.position = new(xPos, -280f);
+	}
+	
+	public void UpdateLoadingText(string content) {
+		loadingText.text = content;
 	}
 
 	// Open the loading screen slowly, then transition to the game world scene
