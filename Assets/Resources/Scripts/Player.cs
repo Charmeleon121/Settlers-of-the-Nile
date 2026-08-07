@@ -12,6 +12,7 @@ public class Player : MonoBehaviour {
 	private int buildRotation = 0;
 
 	private GameObject selectedNPC;
+	private GameObject blockSelectionIndicator;
 
 	private NPCHandler npcHandler;
 	private MapHandler mapHandler;
@@ -31,6 +32,7 @@ public class Player : MonoBehaviour {
 		buildTarget = "Nothing";
 
 		selectedNPC = null;
+		blockSelectionIndicator = GameObject.Find("Selection Block");
 
 		npcHandler = GameObject.Find("EventSystem").GetComponent<NPCHandler>();
 		mapHandler = GameObject.Find("EventSystem").GetComponent<MapHandler>();
@@ -45,12 +47,22 @@ public class Player : MonoBehaviour {
 			} else {
 				mapHandler.ExitBuildMode();
 			}
+			
+			blockSelectionIndicator.transform.position = new(0f, -50f, 0f);
+		}
+		
+		if (input.Gameplay.Select.triggered) {
+			if (buildTarget == "Nothing") {
+				blockSelectionIndicator.transform.position = GetCursorWorldPos();
+			}
 		}
 
 		if (input.Gameplay.Deselect.triggered) {
 			if (buildTarget != "Nothing") {
 				mapHandler.ExitBuildMode();
 			}
+			
+			blockSelectionIndicator.transform.position = new(0f, -50f, 0f);
 		}
 
 		if (!isPaused) {
