@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class MapHandler : MonoBehaviour {
@@ -89,6 +90,7 @@ public class MapHandler : MonoBehaviour {
 
 	// Startup sequence
 	private IEnumerator StartupSequence() {
+		// Currently takes ~2m11s to load on low-end hardware! Needs MAJOR optimization!
 		yield return StartCoroutine(GenerateMap(100, 100));
 
 		PlaceColonists(new(-6f, 0.4f, 12f), 10); // Start with 10 initial colonists centred on (x=-6, z=12)
@@ -111,6 +113,7 @@ public class MapHandler : MonoBehaviour {
 
 		yield return StartCoroutine(PlaceWaterBlocks(width, length));
 		yield return StartCoroutine(PlaceGroundBlocks(width, length));
+		yield return StartCoroutine(ApplyMatToGroundBlocks(width));
 
 		foreach (GameObject ground in groundBlocks) {
 			ground.GetComponent<Renderer>().enabled = false;
@@ -144,28 +147,13 @@ public class MapHandler : MonoBehaviour {
 	// Place all of the ground blocks around the river
 	private IEnumerator PlaceGroundBlocks(int w, int l) {
 		GameObject newBlock;
+		
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
 			float riverXPos = GetRiverTilePos(z);
-
-			Vector3 originPoint;
-			Material mat;
+			
 			for (float x = -w / 2; x < w / 2; x += 0.5f) {
 				if (x < riverXPos - (w / 30) || x > riverXPos + (w / 30)) {
 					newBlock = Instantiate(groundBlockPrefab, new(x, 0f, z), Quaternion.Euler(0f, 0f, 0f));
-					newBlock.tag = "Ground";
-
-					originPoint = GetNearestWaterTilePos(newBlock);
-					if (newBlock.transform.position.x < 0f) {
-						originPoint.x -= 0.5f;
-					} else {
-						originPoint.x += 0.5f;
-					}
-
-					mat = new(grassShader);
-					mat.SetFloat("_Divisor", w / 6f);
-					mat.SetVector("_Target_Position", originPoint);
-
-					newBlock.GetComponent<Renderer>().material = mat;
 
 					groundBlocks.Add(newBlock);
 					terrainBlocks.Add(newBlock);
@@ -174,6 +162,30 @@ public class MapHandler : MonoBehaviour {
 
 			yield return null;
 		}
+	}
+	
+	// Apply material to every ground block
+	private IEnumerator ApplyMatToGroundBlocks(int w) {
+		Material mat;
+		Vector3 originPoint;
+		
+		foreach (GameObject ground in groundBlocks) {
+			originPoint = GetNearestWaterTilePos(ground);
+			
+			if (ground.transform.position.x < 0f) {
+				originPoint.x -= 0.5f;
+			} else {
+				originPoint.x += 0.5f;
+			}
+
+			mat = new(grassShader);
+			mat.SetFloat("_Divisor", w / 6f);
+			mat.SetVector("_Target_Position", originPoint);
+
+			ground.GetComponent<Renderer>().material = mat;
+		}
+		
+		yield return null;
 	}
 
 	// Place a number of colonists in an area around a set centre point
@@ -201,13 +213,16 @@ public class MapHandler : MonoBehaviour {
 		float distance = Mathf.Infinity;
 		GameObject closest = null;
 		Vector3 waterPosition;
-		foreach (GameObject water in waterBlocks) {
-			if (water.transform.position.z == groundBlock.transform.position.z) {
-				waterPosition = new(water.transform.position.x, 0f, water.transform.position.z);
-				if (Vector3.Distance(groundBlock.transform.position, waterPosition) < distance) {
-					distance = Mathf.Abs(groundBlock.transform.position.x - waterPosition.x);
-					closest = water;
-				}
+		
+		IEnumerable<GameObject> waterOnZLevel = waterBlocks.Where(w => w.transform.position.z == groundBlock.transform.position.z);
+		
+		foreach (GameObject water in waterOnZLevel) {
+			waterPosition = water.transform.position;
+			waterPosition.y = 0f;
+			
+			if (Vector3.Distance(groundBlock.transform.position, waterPosition) < distance) {
+				distance = Mathf.Abs(groundBlock.transform.position.x - waterPosition.x);
+				closest = water;
 			}
 		}
 
