@@ -79,7 +79,7 @@ public class UIHandler : MonoBehaviour {
 	}
 
 	private void UpdateFPSDisplay() {
-		if (fpsTimer == 20) {
+		if (fpsTimer == Application.targetFrameRate / 2f) {
 			float fps = 1 / Time.deltaTime;
 			fpsDisplay.text = $"FPS: {fps:n2}";
 

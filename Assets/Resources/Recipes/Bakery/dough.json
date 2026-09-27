@@ -1,0 +1,6 @@
+{
+	"Ingredients":[{"Item":"Emmer Flour", "Amount":2}],
+	"Output": [{"Item":"Bread", "Amount":1}],
+	"Building": "Bakery",
+	"Workers": 1
+}

@@ -131,7 +131,7 @@ public class Player : MonoBehaviour {
 		Ray ray = Camera.main.ScreenPointToRay(Mouse.current.position.ReadValue());
 
 		if (Physics.Raycast(ray, out RaycastHit hit)) {
-			return new(Mathf.RoundToInt(hit.point.x), 0.3f, Mathf.RoundToInt(hit.point.z));
+			return new(Mathf.RoundToInt(hit.point.x * 2f) / 2f, 0.3f, Mathf.RoundToInt(hit.point.z * 2f) / 2f);
 		}
 
 		return Vector3.zero;

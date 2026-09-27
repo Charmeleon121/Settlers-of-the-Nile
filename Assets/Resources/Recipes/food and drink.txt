@@ -1,0 +1,72 @@
+== FRUIT ==
+- Date
+- Grape/Raisin
+- Fig
+- Nabk berry
+- Pomegranate
+
+== VEGETABLES ==
+- Garlic
+- Green scallions
+- Onion
+- Leek
+- Lettuce
+- Celery
+- Cucumber
+- Radish
+- Turnip
+- Gourd
+- Melon
+- Papyrus stalk
+
+== LEGUMES ==
+- Pea
+- Bean
+- Lentil
+- Chickpea
+
+== BAKED/COOKED ==
+- Bread
+- Cake
+- Stew
+
+== MEAT (For the rich) ==
+- Pork
+- Mutton
+- Beef
+- Crane
+- Hippo
+- Gazelle
+- Mouse
+- Hedgehog
+
+== POULTRY (For the poor) ==
+- Duck
+- Pigeon
+- Goose
+- Partridge
+- Quail
+- Dove
+- Swan
+- Ostrich
+- Egg
+
+== SWEETS ==
+- Marshmallows (root pulp boiled with honey)
+
+== SPICES ==
+- Cumin
+- Dill
+- Coriander
+- Mustard
+- Thyme
+- Majoram
+- Cinnamon
+
+== OTHER ==
+- Honey
+
+== DRINK ==
+- Water
+- Beer
+- Wine
