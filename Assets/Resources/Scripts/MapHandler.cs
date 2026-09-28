@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
@@ -113,7 +114,7 @@ public class MapHandler : MonoBehaviour {
 
 		yield return StartCoroutine(PlaceWaterBlocks(width, length));
 		yield return StartCoroutine(PlaceGroundBlocks(width, length));
-		yield return StartCoroutine(ApplyMatToGroundBlocks(width));
+		yield return StartCoroutine(ApplyMatToGroundBlocks(width, length));
 
 		foreach (GameObject ground in groundBlocks) {
 			ground.GetComponent<Renderer>().enabled = false;
@@ -141,14 +142,14 @@ public class MapHandler : MonoBehaviour {
 				}
 			}
 		}
-		
+
 		yield return null;
 	}
 
 	// Place all of the ground blocks around the river
 	private IEnumerator PlaceGroundBlocks(int w, int l) {
 		uiHandler.UpdateLoadingText("Generating land...");
-		
+
 		GameObject newBlock;
 		
 		for (float z = -l / 2; z < l / 2; z += 0.5f) {
@@ -163,33 +164,41 @@ public class MapHandler : MonoBehaviour {
 				}
 			}
 		}
-		
+
 		yield return null;
 	}
 	
 	// Apply material to every ground block
-	private IEnumerator ApplyMatToGroundBlocks(int w) {
+	private IEnumerator ApplyMatToGroundBlocks(int w, int l) {
 		uiHandler.UpdateLoadingText("Applying ground textures...");
-		
-		Material mat;
-		Vector3 originPoint;
-		
-		foreach (GameObject ground in groundBlocks) {
-			originPoint = GetNearestWaterTilePos(ground);
-			
-			if (ground.transform.position.x < 0f) {
-				originPoint.x -= 0.5f;
-			} else {
-				originPoint.x += 0.5f;
-			}
 
+		List<Vector3> leftOriginPoints = new();
+		List<Vector3> rightOriginPoints = new();
+		for (float z = -l / 2f; z < l / 2f; z += 0.5f) {
+			Vector3 leftOrigin = GetNearestWaterTilePos(new(-l / 2f, 0f, z));
+			leftOrigin.x -= 0.5f;
+
+			Vector3 rightOrigin = GetNearestWaterTilePos(new(l / 2f, 0f, z));
+			rightOrigin.x += 0.5f;
+
+			leftOriginPoints.Add(leftOrigin);
+			rightOriginPoints.Add(rightOrigin);
+		}
+
+		Material mat;
+		foreach (GameObject ground in groundBlocks) {
 			mat = new(grassShader);
 			mat.SetFloat("_Divisor", w / 6f);
-			mat.SetVector("_Target_Position", originPoint);
+
+			if (ground.transform.position.x < 0) {
+				mat.SetVector("_Target_Position", leftOriginPoints[(int) ((ground.transform.position.z + 50) * 2f)]);
+			} else {
+				mat.SetVector("_Target_Position", rightOriginPoints[(int)((ground.transform.position.z + 50) * 2f)]);
+			}
 
 			ground.GetComponent<Renderer>().material = mat;
 		}
-		
+
 		yield return null;
 	}
 
@@ -214,19 +223,19 @@ public class MapHandler : MonoBehaviour {
 	}
 
 	// Get the position of the nearest water tile to a given ground block
-	private Vector3 GetNearestWaterTilePos(GameObject groundBlock) {
+	private Vector3 GetNearestWaterTilePos(Vector3 startingPosition) {
 		float distance = Mathf.Infinity;
 		GameObject closest = null;
 		Vector3 waterPosition;
 		
-		IEnumerable<GameObject> waterOnZLevel = waterBlocks.Where(w => w.transform.position.z == groundBlock.transform.position.z);
+		IEnumerable<GameObject> waterOnZLevel = waterBlocks.Where(w => w.transform.position.z == startingPosition.z);
 		
 		foreach (GameObject water in waterOnZLevel) {
 			waterPosition = water.transform.position;
 			waterPosition.y = 0f;
 			
-			if (Vector3.Distance(groundBlock.transform.position, waterPosition) < distance) {
-				distance = Mathf.Abs(groundBlock.transform.position.x - waterPosition.x);
+			if (Vector3.Distance(startingPosition, waterPosition) < distance) {
+				distance = Mathf.Abs(startingPosition.x - waterPosition.x);
 				closest = water;
 			}
 		}
