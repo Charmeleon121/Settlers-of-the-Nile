@@ -1,7 +1,6 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class UIHandler : MonoBehaviour {
@@ -11,8 +10,8 @@ public class UIHandler : MonoBehaviour {
 	private Slider dayNightSlider;
 	private TextMeshProUGUI dayLabel;
 
-	public Button housingButton, smallHouseButton;
-	private GameObject houseSelectMenu;
+	public Button housingButton, smallHouseButton, storageButton, basicStorageButton;
+	private GameObject houseSelectMenu, storageSelectMenu;
 
 	private GameObject colonistPropertyDisplay;
 	public TextMeshProUGUI colonistNameLabel, colonistJobLabel;
@@ -42,6 +41,12 @@ public class UIHandler : MonoBehaviour {
 
 		houseSelectMenu = GameObject.Find("House Select Menu");
 		houseSelectMenu.transform.position = new(510f, -112.5f);
+
+		storageButton.onClick.AddListener(() => SwapStorageSelectMenuVisibility());
+		basicStorageButton.onClick.AddListener(() => mapHandler.BuildMode("Basic Warehouse"));
+
+		storageSelectMenu = GameObject.Find("Storage Select Menu");
+		storageSelectMenu.transform.position = new(600f, -112.5f);
 
 		colonistPropertyDisplay = GameObject.Find("Colonist Properties");
 		colonistPropertyDisplay.transform.position = new(1720f, -280f);
@@ -89,10 +94,24 @@ public class UIHandler : MonoBehaviour {
 		}
 	}
 
-	public void SwapHouseSelectMenuVisibility() {
+	private void SwapHouseSelectMenuVisibility() {
 		float xPos = houseSelectMenu.transform.position.x;
 		float yPos = houseSelectMenu.transform.position.y;
 		houseSelectMenu.transform.position = new(xPos, -yPos);
+
+		if (storageSelectMenu.transform.position.y > 0) {
+			SwapStorageSelectMenuVisibility();
+		}
+	}
+
+	private void SwapStorageSelectMenuVisibility() {
+		float xPos = storageSelectMenu.transform.position.x;
+		float yPos = storageSelectMenu.transform.position.y;
+		storageSelectMenu.transform.position = new(xPos, -yPos);
+
+		if (houseSelectMenu.transform.position.y > 0) {
+			SwapHouseSelectMenuVisibility();
+		}
 	}
 
 	public void UpdateNPCDisplay() {

@@ -21,7 +21,7 @@ public class Colonist : MonoBehaviour {
 		colonistName = "Steven";    // Placeholder for now
 		
 		colonistHealth = 100;	// When this hits 0, the colonist dies
-		colonistHunger = 0;	// When this hits 100, they are "starving" and will take damage
+		colonistHunger = 0;		// When this hits 100, they are "starving" and will take damage
 		colonistThirst = 0;		// When this hits 100, they are "dehydrated" and will take damage
 		colonistEnergy = 100;	// When this hits 0, they will pass out and become useless until rested
 	}

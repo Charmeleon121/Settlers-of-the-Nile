@@ -99,11 +99,7 @@ public class Player : MonoBehaviour {
 
 	private void PlaceObject() {
 		if (input.Gameplay.Select.IsPressed() && !uiClickBlocker.IsUIBlocking()) {
-			switch (buildTarget) {
-				case "Small House":
-					mapHandler.Build("Small House");
-					break;
-			}
+			mapHandler.Build(buildTarget);
 		}
 	}
 

@@ -9,8 +9,8 @@ public class MapHandler : MonoBehaviour {
 	private static readonly WaitForSeconds enumeratorWaitTime = new(0.1f);
 
 	// Prefabs and materials
-	private GameObject groundBlockPrefab, waterBlockPrefab, colonistPrefab, smallHousePrefab;
-	private GameObject ghostSmallHousePrefab;
+	private GameObject groundBlockPrefab, waterBlockPrefab, colonistPrefab, smallHousePrefab, basicWarehousePrefab;
+	private GameObject ghostSmallHousePrefab, ghostBasicWarehousePrefab;
 	private Material ghostMaterial, ghostErrorMaterial;
 	private Shader grassShader;
 
@@ -56,8 +56,10 @@ public class MapHandler : MonoBehaviour {
 		waterBlockPrefab = Resources.Load<GameObject>("Blocks/Water");
 		colonistPrefab = Resources.Load<GameObject>("NPCs/Colonist");
 		smallHousePrefab = Resources.Load<GameObject>("Models/Prefabs/Basic House");
+		basicWarehousePrefab = Resources.Load<GameObject>("Models/Prefabs/Basic Warehouse");
 
 		ghostSmallHousePrefab = Resources.Load<GameObject>("Models/Prefabs/Basic House Ghost");
+		ghostBasicWarehousePrefab = Resources.Load<GameObject>("Models/Prefabs/Basic Warehouse Ghost");
 
 		ghostMaterial = Resources.Load<Material>("Materials/Ghost Material");
 		ghostErrorMaterial = Resources.Load<Material>("Materials/Ghost Error Material");
@@ -345,10 +347,19 @@ public class MapHandler : MonoBehaviour {
 			ExitBuildMode();
 		} else {
 			// Enter into placement mode
-			if (target == "Small House") {
-				GameObject ghostHouse = Instantiate(ghostSmallHousePrefab, new(0f, 0.4f, 0f), Quaternion.Euler(0f, 0f, 0f));
-				ghostHouse.tag = "Ghost";
-				playerScript.SetBuildTarget("Small House");
+			GameObject ghostObject = null;
+			switch (target) {
+				case "Small House":
+					ghostObject = Instantiate(ghostSmallHousePrefab, new(0f, 0.4f, 0f), Quaternion.Euler(0f, 0f, 0f));
+					break;
+				case "Basic Warehouse":
+					ghostObject = Instantiate(ghostBasicWarehousePrefab, new(0f, 0.4f, 0f), Quaternion.Euler(0f, 0f, 0f));
+					break;
+			}
+
+			if (ghostObject != null) {
+				ghostObject.tag = "Ghost";
+				playerScript.SetBuildTarget(target);
 			}
 		}
 	}
@@ -357,18 +368,28 @@ public class MapHandler : MonoBehaviour {
 	public void Build(string target) {
 		if (canBuild) {
 			int rotation = playerScript.GetBuildRotation();
+			Vector3 cursorPos = playerScript.GetCursorWorldPos();
 
+			int[] requirements = null;
+			GameObject builtObject = null;
 			switch (target) {
 				case "Small House":
-					Vector3 cursorPos = playerScript.GetCursorWorldPos();
-					GameObject builtObject = Instantiate(ghostSmallHousePrefab, cursorPos, Quaternion.Euler(0f, rotation, 0f));
-					builtObject.tag = "Buildable";
+					builtObject = Instantiate(ghostSmallHousePrefab, cursorPos, Quaternion.Euler(0f, rotation, 0f));
 					builtObject.GetComponent<Buildable>().SetBuildType("Small House");
+					requirements = new int[] { 0, 10 };
 
-					int[] requirements = new int[] { 0, 10 };
-
-					npcHandler.AddTaskToQueue('B', requirements, builtObject);
 					break;
+				case "Basic Warehouse":
+					builtObject = Instantiate(ghostBasicWarehousePrefab, cursorPos, Quaternion.Euler(0f, rotation, 0f));
+					builtObject.GetComponent<Buildable>().SetBuildType("Basic Warehouse");
+					requirements = new int[] { 0, 0 };
+
+					break;
+			}
+
+			if (builtObject != null && requirements != null) {
+				builtObject.tag = "Buildable";
+				npcHandler.AddTaskToQueue('B', requirements, builtObject);
 			}
 		}
 	}
@@ -383,11 +404,17 @@ public class MapHandler : MonoBehaviour {
 				buildScript = buildable.GetComponent<Buildable>();
 
 				if (buildScript.IsComplete()) {
-					if (buildScript.GetBuildType() == "Small House") {
+					string buildType = buildScript.GetBuildType();
+
+					if (buildType == "Small House") {
 						Instantiate(smallHousePrefab, buildable.transform.position, buildable.transform.rotation);
-						Destroy(buildable);
+						break;
+					} else if (buildType == "Basic Warehouse") {
+						Instantiate(basicWarehousePrefab, buildable.transform.position, buildable.transform.rotation);
 						break;
 					}
+
+					Destroy(buildable);
 				}
 			}
 		}

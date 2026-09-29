@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public class Warehouse : MonoBehaviour {
-	private readonly int[] inventory = { 0, 00 };
+	private readonly int[] inventory = { 0, 0 };
 
 	public void AddToWarehouse(int[] items) {
 		for (int i = 0; i < inventory.Length; ++i) {
